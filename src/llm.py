@@ -62,23 +62,40 @@ if __name__ == '__main__':
 
     os.makedirs('output', exist_ok=True)
     os.makedirs('output/topics', exist_ok=True)
-    os.makedirs('output/embeddings', exist_ok=True)
+    os.makedirs('output/embeddings_topics', exist_ok=True)
+    os.makedirs('output/embeddings_citations', exist_ok=True)
+
+    #game = sys.argv[1].split('/')[-1].split('.')[0]
+
+    #df = pd.read_csv(os.path.join(os.getcwd(), sys.argv[1]))
+    #reviews = df['review'].astype(str).tolist()
+
+    #topics = []
+    #batch_size = 16
+    #for batch in tqdm(get_batch(reviews, batch_size=batch_size), desc='Processing', total=len(reviews)//batch_size):
+    #    prompt = get_prompt(batch)
+    #    response = get_topics(prompt)
+    #    topics.extend([t.model_dump() for t in response.topics])
+    
+    #df_topics = pd.DataFrame(topics)
+    #all_topics = df_topics['topic'].tolist()
+    #df_topics.explode('citations').to_csv(f'output/topics/{game}_topics.csv', index=False)
+    
+    #pd.DataFrame(data=get_embedding(all_topics), index=all_topics).to_csv(f'output/embeddings/{game}_embeddings.csv', index=True, header=False)
+    
+    embedding_size = len(get_embedding(['test'])[0])
+    print(embedding_size)
+    batch_size = 64
 
     game = sys.argv[1].split('/')[-1].split('.')[0]
+    df = pd.read_csv(sys.argv[1])
+    reviews = df['citations'].astype(str).tolist()
+    embeddings = np.zeros((len(reviews), embedding_size))
 
-    df = pd.read_csv(os.path.join(os.getcwd(), sys.argv[1]))
-    reviews = df['review'].astype(str).tolist()
+    for i, batch in tqdm(enumerate(get_batch(reviews, batch_size=batch_size)), desc='Processing', total=len(reviews)//batch_size, leave=False):
+        start = i * batch_size
+        end = min(start + batch_size, len(reviews))
+        embeddings[start:end] = get_embedding(batch)
 
-    topics = []
-    batch_size = 16
-    for batch in tqdm(get_batch(reviews, batch_size=batch_size), desc='Processing', total=len(reviews)//batch_size):
-        prompt = get_prompt(batch)
-        response = get_topics(prompt)
-        topics.extend([t.model_dump() for t in response.topics])
-    
-    df_topics = pd.DataFrame(topics)
-    all_topics = df_topics['topic'].tolist()
-    df_topics.explode('citations').to_csv(f'output/topics/{game}_topics.csv', index=False)
-    
-    pd.DataFrame(data=get_embedding(all_topics), index=all_topics).to_csv(f'output/embeddings/{game}_embeddings.csv', index=True, header=False)
+    pd.DataFrame(data=embeddings).to_csv(f'output/embeddings_citations/{game}_embeddings.csv', index=False, header=False)
 
