@@ -41,14 +41,6 @@ def get_topics(prompt: str) -> TopicList:
     return TopicList.model_validate_json(response.response)
 
 
-def get_embedding(text: list[str]) -> np.ndarray:
-    emb = ollama.embed(
-        model=MODEL,
-        input=text
-    ).embeddings
-    return np.array(emb)
-
-
 def get_batch(reviews: list, batch_size: int = 16) -> Generator[list, None, None]:
     for i in range(0, len(reviews), batch_size):
         yield reviews[i:i + batch_size]
@@ -62,40 +54,19 @@ if __name__ == '__main__':
 
     os.makedirs('output', exist_ok=True)
     os.makedirs('output/topics', exist_ok=True)
-    os.makedirs('output/embeddings_topics', exist_ok=True)
-    os.makedirs('output/embeddings_citations', exist_ok=True)
-
-    #game = sys.argv[1].split('/')[-1].split('.')[0]
-
-    #df = pd.read_csv(os.path.join(os.getcwd(), sys.argv[1]))
-    #reviews = df['review'].astype(str).tolist()
-
-    #topics = []
-    #batch_size = 16
-    #for batch in tqdm(get_batch(reviews, batch_size=batch_size), desc='Processing', total=len(reviews)//batch_size):
-    #    prompt = get_prompt(batch)
-    #    response = get_topics(prompt)
-    #    topics.extend([t.model_dump() for t in response.topics])
-    
-    #df_topics = pd.DataFrame(topics)
-    #all_topics = df_topics['topic'].tolist()
-    #df_topics.explode('citations').to_csv(f'output/topics/{game}_topics.csv', index=False)
-    
-    #pd.DataFrame(data=get_embedding(all_topics), index=all_topics).to_csv(f'output/embeddings/{game}_embeddings.csv', index=True, header=False)
-    
-    embedding_size = len(get_embedding(['test'])[0])
-    print(embedding_size)
-    batch_size = 64
 
     game = sys.argv[1].split('/')[-1].split('.')[0]
-    df = pd.read_csv(sys.argv[1])
-    reviews = df['citations'].astype(str).tolist()
-    embeddings = np.zeros((len(reviews), embedding_size))
 
-    for i, batch in tqdm(enumerate(get_batch(reviews, batch_size=batch_size)), desc='Processing', total=len(reviews)//batch_size, leave=False):
-        start = i * batch_size
-        end = min(start + batch_size, len(reviews))
-        embeddings[start:end] = get_embedding(batch)
+    df = pd.read_csv(os.path.join(os.getcwd(), sys.argv[1]))
+    reviews = df['review'].astype(str).tolist()
 
-    pd.DataFrame(data=embeddings).to_csv(f'output/embeddings_citations/{game}_embeddings.csv', index=False, header=False)
-
+    topics = []
+    batch_size = 16
+    for batch in tqdm(get_batch(reviews, batch_size=batch_size), desc='Processing', total=len(reviews)//batch_size):
+        prompt = get_prompt(batch)
+        response = get_topics(prompt)
+        topics.extend([t.model_dump() for t in response.topics])
+    
+    df_topics = pd.DataFrame(topics)
+    all_topics = df_topics['topic'].tolist()
+    df_topics.explode('citations').to_csv(f'output/topics/{game}_topics.csv', index=False)
