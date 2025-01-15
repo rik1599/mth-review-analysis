@@ -34,13 +34,14 @@ fi
 
 # Create base partition directory in /tmp
 BASE_PARTITION_DIR="/tmp/partition_$(basename $DIRECTORY)"
+# Remove existing partition directory
+if [[ -d "$BASE_PARTITION_DIR" ]]; then
+    rm -rf "$BASE_PARTITION_DIR"
+fi
 mkdir -p "$BASE_PARTITION_DIR"
 
-# Get a list of all files in the directory (skip directories)
-FILES=()
-while IFS= read -r -d $'\0'; do
-    FILES+=("$REPLY")
-done < <(find "$DIRECTORY" -type f -print0)
+# Get a list of all files in the first level of the directory (excluding subdirectories)
+FILES=($(find "$DIRECTORY" -maxdepth 1 -type f))
 
 TOTAL_FILES=${#FILES[@]}
 if [[ $TOTAL_FILES -eq 0 ]]; then

@@ -1,12 +1,19 @@
 import ollama
 import numpy as np
+from enum import Enum
 
 MODEL='nomic-embed-text'
 
-def get_embedding(text: list[str]) -> np.ndarray:
+class NomicPrefix(Enum):
+    DOCUMENT = 'search_document'
+    QUERY = 'search_query'
+    CLUSTERING = 'clustering'
+    CLASSIFICATION = 'classification'
+
+def get_embedding(text: list[str], prefix: NomicPrefix = NomicPrefix.DOCUMENT) -> np.ndarray:
     emb = ollama.embed(
         model=MODEL,
-        input=[f"clustering: {t}" for t in text],
+        input=[f"{prefix.value}: {t}" for t in text],
     ).embeddings
     return np.array(emb)
 
@@ -17,14 +24,17 @@ if __name__ == '__main__':
     from tqdm.auto import tqdm
 
     os.makedirs('output', exist_ok=True)
-    os.makedirs('output/embeddings_topics', exist_ok=True)
-    os.makedirs('output/embeddings_citations', exist_ok=True)
-
-    game = sys.argv[1].split('/')[-1].split('.')[0]
+    os.makedirs('output/embeddings', exist_ok=True)
+    os.makedirs('output/embeddings/topics', exist_ok=True)
+    
+    game = os.path.basename(sys.argv[1]).split('.')[0]
     df = pd.read_csv(sys.argv[1])
+    df.rename(columns={'citations': 'review'}, inplace=True)
 
-    reviews = df['citations'].astype(str).tolist()
-    topics = df['topic'].astype(str).unique().tolist()
+    reviews = df['review'].astype(str).tolist()
+
+    df['topic'] = df['topic'].astype(str).apply(lambda x: x.lower())
+    topics = df['topic'].unique().tolist()
 
     BATCH_SIZE = 128
     CTX_SIZE = get_embedding(['test']).shape[1]
@@ -37,7 +47,8 @@ if __name__ == '__main__':
     for i in tqdm(range(0, len(topics), BATCH_SIZE), desc='Processing topics'):
         topics_emb[i:i+BATCH_SIZE] = get_embedding(topics[i:i+BATCH_SIZE])
     
-    np.save(os.path.join('output', 'embeddings_topics', f'{game}_topics.npy'), topics_emb)
-    pd.Series(topics).to_csv(os.path.join('output', 'embeddings_topics', f'{game}_topics.csv'), index=False)
+    df['embedding'] = reviews_emb.tolist()
+    df.to_parquet(f'output/embeddings/{game}.parquet', index=False, compression='gzip')
 
-    np.save(os.path.join('output', 'embeddings_citations', f'{game}_reviews.npy'), reviews_emb)
+    df_topics = pd.DataFrame(data=topics_emb, index=topics)
+    df_topics.to_parquet(f'output/embeddings/topics/{game}.parquet', index=True, compression='gzip')

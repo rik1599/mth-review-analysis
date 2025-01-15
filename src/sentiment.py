@@ -37,14 +37,13 @@ if __name__ == '__main__':
     os.makedirs('output', exist_ok=True)
     os.makedirs('output/sentiments', exist_ok=True)
 
-    game = sys.argv[1].split('/')[-1].split('.')[0]
-    df = pd.read_csv(sys.argv[1])
+    df = pd.read_parquet(sys.argv[1])
+    citations = df['review'].astype(str).tolist()
 
-    citations = df['citations'].astype(str).tolist()
     sentiments = [
         sentiment(citation).sentiment.value
         for citation in tqdm(citations, desc='Processing sentiments')
     ]
 
-    sentiments = pd.Series(sentiments)
-    sentiments.to_csv(os.path.join('output', 'sentiments', f'{game}_sentiments.csv'), index=False)
+    df['sentiment'] = sentiments
+    df.to_parquet(f'output/sentiments/{os.path.basename(sys.argv[1])}', index=False, compression='gzip')
