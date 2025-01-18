@@ -9,15 +9,13 @@
 		"ghcr.io/duduribeiro/devcontainer-features/tmux:1": {"version": "latest"}
 	},
 	"containerEnv": {
-		"NVIDIA_VISIBLE_DEVICES": "7",
-		"HF_HOME": "/home/vscode/.huggingface"
+		"NVIDIA_VISIBLE_DEVICES": "5"
 	},
 	"mounts": [
-		"type=bind,src=${localEnv:HOME}/ollama,dst=/root/.ollama",
-		"type=bind,src=${localEnv:HOME}/hf_cache,dst=/home/vscode/.huggingface"
+		"type=bind,src=${localEnv:HOME}/ollama,dst=/root/.ollama"
 	],
 	"runArgs": [
-		"--name", "vsc-rbelliato-modis-7", "--runtime=nvidia"
+		"--name", "vsc-rbelliato-modis-5", "--runtime=nvidia"
 	],
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
